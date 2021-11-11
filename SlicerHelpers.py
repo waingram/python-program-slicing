@@ -57,7 +57,8 @@ def print_execution_log(execution_log):
             str_to_return = str_to_return + str(linenum) + "\t" + line + "\n"
             linenum = linenum + 1
         log_file.close()
-        return str_to_return
+        print(str_to_return)
+#         return str_to_return
 
 
 class VariableFetcher(ast.NodeVisitor):
@@ -146,7 +147,7 @@ def generate_backwards_slice(execution_log, lineno, scriptname="backwards_slice_
         slicing_file.write("log_file.close()\n")
         slicing_file.close()
         # run the generated script
-        os.system(scriptname)
+        os.system(f'python {scriptname}')
         # print the backward slice document
         if os.path.isfile(slicename):
             slice_file = open(slicename, "r")
