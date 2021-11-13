@@ -58,7 +58,6 @@ def print_execution_log(execution_log):
             linenum = linenum + 1
         log_file.close()
         print(str_to_return)
-#         return str_to_return
 
 
 class VariableFetcher(ast.NodeVisitor):
@@ -72,7 +71,7 @@ class VariableFetcher(ast.NodeVisitor):
         return self.list_of_vars
 
 
-def generate_backwards_slice(execution_log, lineno, scriptname="backwards_slice_generator.py",
+def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname="backwards_slice_generator.py",
                              slicename="backwards_slice.py"):
     if type(scriptname) != str or type(execution_log) != str or type(lineno) != int or type(slicename) != str:
         return "Error: wrong data type"
@@ -89,7 +88,10 @@ def generate_backwards_slice(execution_log, lineno, scriptname="backwards_slice_
         # write import statements
         slicing_file.write("from SlicerHelpers import *\n")
         slicing_file.write("from debuggingbook.Slicer import *\n")
-        slicing_file.write("import numpy as np\nimport os\n\n\n")
+        slicing_file.write("import numpy as np\nimport os\nimport sys\n\n\n")
+
+        slicing_file.write("if os.path.isfile(\"" + slicename + "\"):\n\tos.remove(\"" + slicename + "\")\n")
+
         # write execution log
         slicing_file.write("def test_log_for_slicing():\n")
         log_file = open(execution_log, "r")
@@ -108,39 +110,71 @@ def generate_backwards_slice(execution_log, lineno, scriptname="backwards_slice_
         slicing_file.write("with Slicer(test_log_for_slicing) as slicer:\n")
         slicing_file.write("\ttest_log_for_slicing()\n\n")
         slicing_file.write("_, start_test_log = inspect.getsourcelines(test_log_for_slicing)\n")
-        slicing_file.write(
-            "slice_vars = slicer.dependencies().backward_slice((test_log_for_slicing, start_test_log + " + str(
-                lineno) + ")).all_vars()\n")
-        # Check if slice_vars is empty (perhaps due to function call), and correct issue by fetching the variables used
-        # in the line and individually fetching their dependencies; once each variable's dependencies have been fetched,
-        # add them to the slice_vars variable.
-        slicing_file.write("if len(slice_vars) == 0:\n")
-        slicing_file.write("\tcode_ast = ast.parse(\"" + line_string + "\")\n")
-        slicing_file.write("\tvar_fetcher = VariableFetcher()\n")
-        slicing_file.write("\tvar_fetcher.visit(code_ast)\n")
-        slicing_file.write("\tvars_list = var_fetcher.get_list_of_vars()\n")
-        slicing_file.write("\tfor var_item in vars_list:\n")
-        slicing_file.write("\t\tvar_item_slice_vars = {}\n")
-        slicing_file.write("\t\tlines_done_num = 1\n")
-        slicing_file.write("\t\twhile len(var_item_slice_vars) == 0 and lines_done_num < " + str(lineno) + ":\n")
-        slicing_file.write(
-            "\t\t\tvar_item_slice_vars = slicer.dependencies().backward_slice((var_item, (test_log_for_slicing, start_test_log + " + str(
-                lineno)
-            + " - lines_done_num))).all_vars()\n")
-        slicing_file.write("\t\t\tlines_done_num = lines_done_num + 1\n")
-        slicing_file.write("\t\tslice_vars.update(var_item_slice_vars)\n")
+        if var_to_slice == '':
+            slicing_file.write("var_present = True\n")
+            slicing_file.write(
+                "slice_vars = slicer.dependencies().backward_slice((test_log_for_slicing, start_test_log + " + str(
+                    lineno) + ")).all_vars()\n")
+            slicing_file.write("if len(slice_vars) == 0:\n")
+            slicing_file.write("\tcode_ast = ast.parse(\"" + line_string + "\")\n")
+            slicing_file.write("\tvar_fetcher = VariableFetcher()\n")
+            slicing_file.write("\tvar_fetcher.visit(code_ast)\n")
+            slicing_file.write("\tvars_list = var_fetcher.get_list_of_vars()\n")
+            slicing_file.write("\tfor var_item in vars_list:\n")
+            slicing_file.write("\t\tvar_item_slice_vars = {}\n")
+            slicing_file.write("\t\tlines_done_num = 1\n")
+            slicing_file.write("\t\twhile len(var_item_slice_vars) == 0 and lines_done_num < " + str(lineno) + ":\n")
+            slicing_file.write(
+                "\t\t\tvar_item_slice_vars = slicer.dependencies().backward_slice((var_item, (test_log_for_slicing, start_test_log + " + str(
+                    lineno)
+                + " - lines_done_num))).all_vars()\n")
+            slicing_file.write("\t\t\tlines_done_num = lines_done_num + 1\n")
+            slicing_file.write("\t\tslice_vars.update(var_item_slice_vars)\n")
+        else:
+            slicing_file.write("var_present = True\n")
+            slicing_file.write(
+                "slice_vars = slicer.dependencies().backward_slice((\"" + var_to_slice
+                + "\",(test_log_for_slicing, start_test_log + " + str(
+                    lineno) + "))).all_vars()\n")
+            slicing_file.write("if len(slice_vars) == 0:\n")
+            slicing_file.write("\tcode_ast = ast.parse(\"" + line_string + "\")\n")
+            slicing_file.write("\tvar_fetcher = VariableFetcher()\n")
+            slicing_file.write("\tvar_fetcher.visit(code_ast)\n")
+            slicing_file.write("\tvars_list = var_fetcher.get_list_of_vars()\n")
+            slicing_file.write("\tif \"" + var_to_slice + "\" in vars_list:\n")
+            slicing_file.write("\t\tlines_done_num = 1\n")
+            slicing_file.write("\t\twhile len(slice_vars) == 0 and lines_done_num < " + str(lineno) + ":\n")
+            slicing_file.write(
+                "\t\t\tslice_vars = slicer.dependencies().backward_slice((\"" + var_to_slice
+                + "\",(test_log_for_slicing, start_test_log + " + str(
+                    lineno) + " - lines_done_num))).all_vars()\n")
+            slicing_file.write("\t\t\tlines_done_num = lines_done_num + 1\n")
+            slicing_file.write("\telse:\n\t\tvar_present = False\n")
+
         slicing_file.write("slice_linenos = get_linenos(slice_vars, start_test_log)\n")
+        slicing_file.write("if np.size(slice_linenos) == 0:\n\tsys.exit(\"No dependencies captured. This may be due to"
+                           + " the variable called not existing on the line number " + str(lineno) + ".\")\n")
+
         # combine slice_linenos with import linenos (import_lines)
         slicing_file.write("slice_linenos = np.append(slice_linenos, np.array(" + np.array2string(import_lines,
                                                                                                   separator=",") + "))\n")
         # add in original line checked in case it was a function
         slicing_file.write("slice_linenos = np.append(slice_linenos, np.array([" + str(lineno) + "]))\n")
+
+        # sort linenos and remove duplicates
+        slicing_file.write("slice_linenos = np.unique(slice_linenos)\n")
+        slicing_file.write("slice_linenos = np.sort(slice_linenos)\n")
+
         # once done with combinations, write code to file to take execution log and lines to keep and generate backwards slice file.
-        # start by checking if slicename file exists and removing it if it does. Then open the slicename file.
-        slicing_file.write("if os.path.isfile(\"" + slicename + "\"):\n\tos.remove(\"" + slicename + "\")\n")
+        # open the slicename file.
         slicing_file.write("slice_file = open(\"" + slicename + "\", \"a+\")\n")
         slicing_file.write("log_file = open(\"" + execution_log + "\", \"r\")\n")
         slicing_file.write("current_line = 1\n")
+
+        # write the linenos kept as a comment
+        slicing_file.write(
+            "slice_file.write(\"# Lines Kept: \" + np.array2string(slice_linenos, separator=\",\") + \"\\n\")\n")
+
         slicing_file.write(
             "for line in log_file.readlines():\n\tif current_line in slice_linenos:\n\t\tslice_file.write(line)\n\tcurrent_line = current_line + 1\n")
         slicing_file.write("slice_file.close()\n")
@@ -153,4 +187,6 @@ def generate_backwards_slice(execution_log, lineno, scriptname="backwards_slice_
             slice_file = open(slicename, "r")
             print(slice_file.read())
             slice_file.close()
-        return "Slice successfully generated."
+            return "Slice successfully generated."
+        else:
+            return "Slice not generated; operation unsuccessful."
