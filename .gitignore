@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+execution_log.py
+backwards_slice.py
+backwards_slice_generator.py
