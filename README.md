@@ -8,6 +8,12 @@ Once the program slice is isolated, developers can use it to debug a fault in th
 
 ## Installation
 
+```Shell
+conda create -y -n python-program-slicing
+conda activate python-program-slicing
+
+jupyter lab
+```
 
 ## Usage
 
