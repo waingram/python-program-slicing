@@ -8,8 +8,12 @@ Once the program slice is isolated, developers can use it to debug a fault in th
 
 ## Installation
 
+1. Create the environment from the `environment.yml` file. 
+2. Activate the environment. 
+3. Run JupyterLab.
+
 ```Shell
-conda create -y -n python-program-slicing
+conda env create -f environment.yml
 conda activate python-program-slicing
 
 jupyter lab
