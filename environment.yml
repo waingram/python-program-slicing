@@ -17,11 +17,12 @@ dependencies:
   - notedown
   - markdown
   - mypy
-  - selenium
-  - geckodriver
-  - django
+  # - selenium
+  # - geckodriver
+  # - django
   - pip
   - pip:
+      - debuggingbook
       - pydot
       - yapf
       - autopep8
