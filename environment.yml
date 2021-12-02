@@ -1,0 +1,42 @@
+name: python-program-slicing
+channels:
+  - defaults
+  - anaconda-fusion
+  - conda-forge
+  - bjornfjohansson
+  - anaconda-platform
+dependencies:
+  - python=3.9.7  # Our official development version
+  - jupyterlab
+  - matplotlib
+  - numpy
+  - scipy
+  - pandas
+  - python-graphviz
+  - autopep8
+  - notedown
+  - markdown
+  - mypy
+  - selenium
+  - geckodriver
+  - django
+  - pip
+  - pip:
+      - pydot
+      - yapf
+      - autopep8
+      - svglib
+      - jupyter_contrib_nbextensions
+      - showast
+      - git+https://github.com/uds-se/pyan#egg=pyan
+      - python-magic
+      - fuzzingbook
+      - pydriller
+      - diff_match_patch
+      - scikit_learn
+      - easyplotly
+      - beautifulsoup4
+      - lxml
+      - networkx
+
+      
