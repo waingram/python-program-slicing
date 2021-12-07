@@ -3,7 +3,8 @@ from debuggingbook.Slicer import *
 import numpy as np
 from ast import *
 import os
-
+            
+INDENT = '    ' # indent four spaces
 
 class ImportFetcher(NodeVisitor):
 
@@ -54,7 +55,7 @@ def print_execution_log(execution_log):
         linenum = 1
         str_to_return = ""
         for line in log_file.readlines():
-            str_to_return = str_to_return + str(linenum) + "\t" + line + "\n"
+            str_to_return = str_to_return + str(linenum) + INDENT + line + "\n"
             linenum = linenum + 1
         log_file.close()
         print(str_to_return)
@@ -79,18 +80,21 @@ def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname=
         if not os.path.isfile(execution_log):
             return "Execution log missing"
         if not scriptname.endswith(".py"):
-            scriptname = scriptname + ".py"
+            scriptname = f"{scriptname}.py"
         if not slicename.endswith(".py"):
-            slicename = slicename + ".py"
+            slicename = f"{slicename}.py"
         if os.path.isfile(scriptname):
             os.remove(scriptname)
+        
         slicing_file = open(scriptname, "a+")
+        
         # write import statements
+        slicing_file.write("# test\n")
         slicing_file.write("from SlicerHelpers import *\n")
         slicing_file.write("from debuggingbook.Slicer import *\n")
         slicing_file.write("import numpy as np\nimport os\nimport sys\n\n\n")
 
-        slicing_file.write("if os.path.isfile(\"" + slicename + "\"):\n\tos.remove(\"" + slicename + "\")\n")
+        slicing_file.write(f"if os.path.isfile(\"{slicename}\"):\n{INDENT}os.remove(\"{slicename}\")\n")
 
         # write execution log
         slicing_file.write("def test_log_for_slicing():\n")
@@ -101,65 +105,52 @@ def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname=
         line_string = ""
         for line in log_file.readlines():
             # may want to check which lines begin with comments and save those lines?
-            slicing_file.write("\t" + line)
+            slicing_file.write(INDENT + line)
             if currentline == lineno:
                 line_string = line.rstrip("\n") #strip off the trailing newline character when storing the line
             currentline = currentline + 1
         log_file.close()
         slicing_file.write("\n\n")
         slicing_file.write("with Slicer(test_log_for_slicing) as slicer:\n")
-        slicing_file.write("\ttest_log_for_slicing()\n\n")
+        slicing_file.write(f"{INDENT}test_log_for_slicing()\n\n")
         slicing_file.write("_, start_test_log = inspect.getsourcelines(test_log_for_slicing)\n")
         if var_to_slice == '':
             slicing_file.write("var_present = True\n")
-            slicing_file.write(
-                "slice_vars = slicer.dependencies().backward_slice((test_log_for_slicing, start_test_log + " + str(
-                    lineno) + ")).all_vars()\n")
+            slicing_file.write(f"slice_vars = slicer.dependencies().backward_slice((test_log_for_slicing, start_test_log + {str(lineno)})).all_vars()\n")
             slicing_file.write("if len(slice_vars) == 0:\n")
-            slicing_file.write("\tcode_ast = ast.parse(\"" + line_string + "\")\n")
-            slicing_file.write("\tvar_fetcher = VariableFetcher()\n")
-            slicing_file.write("\tvar_fetcher.visit(code_ast)\n")
-            slicing_file.write("\tvars_list = var_fetcher.get_list_of_vars()\n")
-            slicing_file.write("\tfor var_item in vars_list:\n")
-            slicing_file.write("\t\tvar_item_slice_vars = {}\n")
-            slicing_file.write("\t\tlines_done_num = 1\n")
-            slicing_file.write("\t\twhile len(var_item_slice_vars) == 0 and lines_done_num < " + str(lineno) + ":\n")
-            slicing_file.write(
-                "\t\t\tvar_item_slice_vars = slicer.dependencies().backward_slice((var_item, (test_log_for_slicing, start_test_log + " + str(
-                    lineno)
-                + " - lines_done_num))).all_vars()\n")
-            slicing_file.write("\t\t\tlines_done_num = lines_done_num + 1\n")
-            slicing_file.write("\t\tslice_vars.update(var_item_slice_vars)\n")
+            slicing_file.write(f"{INDENT}code_ast = ast.parse(\"{line_string}\")\n")
+            slicing_file.write(f"{INDENT}var_fetcher = VariableFetcher()\n")
+            slicing_file.write(f"{INDENT}var_fetcher.visit(code_ast)\n")
+            slicing_file.write(f"{INDENT}vars_list = var_fetcher.get_list_of_vars()\n")
+            slicing_file.write(f"{INDENT}for var_item in vars_list:\n")
+            slicing_file.write(f"{INDENT}{INDENT}var_item_slice_vars = {{}}\n")
+            slicing_file.write(f"{INDENT}{INDENT}lines_done_num = 1\n")
+            slicing_file.write(f"{INDENT}{INDENT}while len(var_item_slice_vars) == 0 and lines_done_num < {str(lineno)}:\n")
+            slicing_file.write(f"{INDENT}{INDENT}{INDENT}var_item_slice_vars = slicer.dependencies().backward_slice((var_item, (test_log_for_slicing, start_test_log +{str(lineno)} - lines_done_num))).all_vars()\n")
+            slicing_file.write(f"{INDENT}{INDENT}{INDENT}lines_done_num = lines_done_num + 1\n")
+            slicing_file.write(f"{INDENT}{INDENT}slice_vars.update(var_item_slice_vars)\n")
         else:
             slicing_file.write("var_present = True\n")
-            slicing_file.write(
-                "slice_vars = slicer.dependencies().backward_slice((\"" + var_to_slice
-                + "\",(test_log_for_slicing, start_test_log + " + str(
-                    lineno) + "))).all_vars()\n")
+            slicing_file.write(f"slice_vars = slicer.dependencies().backward_slice((\"{var_to_slice}\",(test_log_for_slicing, start_test_log + {str(lineno)}))).all_vars()\n")
             slicing_file.write("if len(slice_vars) == 0:\n")
-            slicing_file.write("\tcode_ast = ast.parse(\"" + line_string + "\")\n")
-            slicing_file.write("\tvar_fetcher = VariableFetcher()\n")
-            slicing_file.write("\tvar_fetcher.visit(code_ast)\n")
-            slicing_file.write("\tvars_list = var_fetcher.get_list_of_vars()\n")
-            slicing_file.write("\tif \"" + var_to_slice + "\" in vars_list:\n")
-            slicing_file.write("\t\tlines_done_num = 1\n")
-            slicing_file.write("\t\twhile len(slice_vars) == 0 and lines_done_num < " + str(lineno) + ":\n")
-            slicing_file.write(
-                "\t\t\tslice_vars = slicer.dependencies().backward_slice((\"" + var_to_slice
-                + "\",(test_log_for_slicing, start_test_log + " + str(
-                    lineno) + " - lines_done_num))).all_vars()\n")
-            slicing_file.write("\t\t\tlines_done_num = lines_done_num + 1\n")
-            slicing_file.write("\telse:\n\t\tvar_present = False\n")
+            slicing_file.write(f"{INDENT}code_ast = ast.parse(\"{line_string}\")\n")
+            slicing_file.write(f"{INDENT}var_fetcher = VariableFetcher()\n")
+            slicing_file.write(f"{INDENT}var_fetcher.visit(code_ast)\n")
+            slicing_file.write(f"{INDENT}vars_list = var_fetcher.get_list_of_vars()\n")
+            slicing_file.write(f"{INDENT}if \"{var_to_slice}\" in vars_list:\n")
+            slicing_file.write(f"{INDENT}{INDENT}lines_done_num = 1\n")
+            slicing_file.write(f"{INDENT}{INDENT}while len(slice_vars) == 0 and lines_done_num < {str(lineno)}:\n")
+            slicing_file.write(f"{INDENT}{INDENT}{INDENT}slice_vars = slicer.dependencies().backward_slice((\"{var_to_slice}\",(test_log_for_slicing, start_test_log + {str(lineno)} - lines_done_num))).all_vars()\n")
+            slicing_file.write(f"{INDENT}{INDENT}{INDENT}lines_done_num = lines_done_num + 1\n")
+            slicing_file.write(f"{INDENT}else:\n{INDENT}{INDENT}var_present = False\n")
 
         slicing_file.write("slice_linenos = get_linenos(slice_vars, start_test_log)\n")
-        slicing_file.write("if np.size(slice_linenos) == 0:\n\tsys.exit(\"No dependencies captured. This may be due to"
-                           + " the variable called not existing on the line number " + str(lineno) + ".\")\n")
+        slicing_file.write(f"if np.size(slice_linenos) == 0:\n{INDENT}sys.exit(\"No dependencies captured. This may be due to the variable called not existing on the line number {str(lineno)}.\")\n")
 
-        # combine slice_linenos with import linenos (import_lines)
-        slicing_file.write("slice_linenos = np.append(slice_linenos, np.array(" + np.array2string(import_lines,
-                                                                                                  separator=",") + "))\n")
+        # combine slice_linenos with import linenos (import_lines)        
+        slicing_file.write(f"slice_linenos = np.append(slice_linenos, np.array({np.array2string(import_lines, separator=',')}))\n")
         # add in original line checked in case it was a function
-        slicing_file.write("slice_linenos = np.append(slice_linenos, np.array([" + str(lineno) + "]))\n")
+        slicing_file.write(f"slice_linenos = np.append(slice_linenos, np.array([{str(lineno)}]))\n")
 
         # sort linenos and remove duplicates
         slicing_file.write("slice_linenos = np.unique(slice_linenos)\n")
@@ -167,16 +158,14 @@ def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname=
 
         # once done with combinations, write code to file to take execution log and lines to keep and generate backwards slice file.
         # open the slicename file.
-        slicing_file.write("slice_file = open(\"" + slicename + "\", \"a+\")\n")
-        slicing_file.write("log_file = open(\"" + execution_log + "\", \"r\")\n")
+        slicing_file.write(f"slice_file = open(\"{slicename}\", \"a+\")\n")
+        slicing_file.write(f"log_file = open(\"{execution_log}\", \"r\")\n")
         slicing_file.write("current_line = 1\n")
 
         # write the linenos kept as a comment
-        slicing_file.write(
-            "slice_file.write(\"# Lines Kept: \" + np.array2string(slice_linenos, separator=\",\") + \"\\n\")\n")
+        slicing_file.write("slice_file.write(\"# Lines Kept: \" + np.array2string(slice_linenos, separator=\",\") + \"\\n\")\n")
 
-        slicing_file.write(
-            "for line in log_file.readlines():\n\tif current_line in slice_linenos:\n\t\tslice_file.write(line)\n\tcurrent_line = current_line + 1\n")
+        slicing_file.write(f"for line in log_file.readlines():\n{INDENT}if current_line in slice_linenos:\n{INDENT}{INDENT}slice_file.write(line)\n{INDENT}current_line = current_line + 1\n")
         slicing_file.write("slice_file.close()\n")
         slicing_file.write("log_file.close()\n")
         slicing_file.close()
