@@ -5,6 +5,8 @@ This iterative process can lead to messy notebooks.
 As the amount of code grows, many developers struggle to keep track of their experimentation, resulting in confusion about how results were obtained. 
 We propose using program slicing to help developers identify the code statements that may be relevant to the variables at a particular point in the program. 
 Once the program slice is isolated, developers can use it to debug a fault in their code, or they may want to extract the slice and copy it to a new, clean notebook. 
+  
+Check out the demo [here](https://github.com/waingram/python-program-slicing/blob/b25bf71fc22853635a0742a2cf18b8b75cbd10c4/program_slice_demo.ipynb). 
 
 ## Installation
 
