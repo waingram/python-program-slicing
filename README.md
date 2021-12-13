@@ -21,6 +21,43 @@ jupyter lab
 
 ## Usage
 
+### Create the execution log 
+
+To create an execution log from your Jupyter Notebook execution, use the following custom IPython Magics. 
+
+```python
+from IPython.core.magic import register_cell_magic
+
+@register_cell_magic
+def write_and_run(line, cell):
+    """Write the contents of a cell to a file, but only if the execution succeeds without error. 
+    
+    -a is an optional parameter, which opens the file in append mode.   
+    
+    e.g., %%write_and_run -a execution_log.py
+    
+    """
+    argz = line.split()
+    file = argz[-1]
+    mode = 'w'
+    if len(argz) == 2 and argz[0] == '-a':
+        mode = 'a'
+        
+    result = get_ipython().run_cell(cell)
+    
+    if result.error_in_exec is None:
+        with open(file, mode) as f:
+            f.write(cell)
+```
+
+Then, at the beginning of every cell, use the magics command. 
+
+```python
+%%write_and_run -a execution_log.py
+```
+
+### Compute the program slice 
+
 ```python
 from SlicerHelpers import *
 
