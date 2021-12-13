@@ -3,8 +3,6 @@ from debuggingbook.Slicer import *
 import numpy as np
 from ast import *
 import os
-            
-INDENT = '    ' # indent four spaces
 
 class ImportFetcher(NodeVisitor):
 
@@ -55,7 +53,7 @@ def print_execution_log(execution_log):
         linenum = 1
         str_to_return = ""
         for line in log_file.readlines():
-            str_to_return = str_to_return + str(linenum) + INDENT + line + "\n"
+            str_to_return = str_to_return + str(linenum) + INDENT + line
             linenum = linenum + 1
         log_file.close()
         print(str_to_return)
@@ -71,7 +69,18 @@ class VariableFetcher(ast.NodeVisitor):
     def get_list_of_vars(self):
         return self.list_of_vars
 
+class SliceHelper():
 
+    _slicer = None
+
+    def __init__(self, execution_logfile):
+        True
+
+
+
+
+INDENT = '    ' # indent four spaces      
+        
 def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname="backwards_slice_generator.py",
                              slicename="backwards_slice.py"):
     if type(scriptname) != str or type(execution_log) != str or type(lineno) != int or type(slicename) != str:
@@ -89,13 +98,12 @@ def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname=
         slicing_file = open(scriptname, "a+")
         
         # write import statements
-        slicing_file.write("# test\n")
         slicing_file.write("from SlicerHelpers import *\n")
         slicing_file.write("from debuggingbook.Slicer import *\n")
         slicing_file.write("import numpy as np\nimport os\nimport sys\n\n\n")
 
         slicing_file.write(f"if os.path.isfile(\"{slicename}\"):\n{INDENT}os.remove(\"{slicename}\")\n")
-
+        
         # write execution log
         slicing_file.write("def test_log_for_slicing():\n")
         log_file = open(execution_log, "r")
@@ -111,6 +119,8 @@ def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname=
             currentline = currentline + 1
         log_file.close()
         slicing_file.write("\n\n")
+        
+        # write code to initialize Slicer, instrument execution log, and do the slice
         slicing_file.write("with Slicer(test_log_for_slicing) as slicer:\n")
         slicing_file.write(f"{INDENT}test_log_for_slicing()\n\n")
         slicing_file.write("_, start_test_log = inspect.getsourcelines(test_log_for_slicing)\n")
@@ -118,7 +128,7 @@ def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname=
             slicing_file.write("var_present = True\n")
             slicing_file.write(f"slice_vars = slicer.dependencies().backward_slice((test_log_for_slicing, start_test_log + {str(lineno)})).all_vars()\n")
             slicing_file.write("if len(slice_vars) == 0:\n")
-            slicing_file.write(f"{INDENT}code_ast = ast.parse(\"{line_string}\")\n")
+            slicing_file.write(f"{INDENT}code_ast = ast.parse(\"{line_string.strip()}\")\n") # make sure to strip away indented whitespace
             slicing_file.write(f"{INDENT}var_fetcher = VariableFetcher()\n")
             slicing_file.write(f"{INDENT}var_fetcher.visit(code_ast)\n")
             slicing_file.write(f"{INDENT}vars_list = var_fetcher.get_list_of_vars()\n")
@@ -133,7 +143,7 @@ def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname=
             slicing_file.write("var_present = True\n")
             slicing_file.write(f"slice_vars = slicer.dependencies().backward_slice((\"{var_to_slice}\",(test_log_for_slicing, start_test_log + {str(lineno)}))).all_vars()\n")
             slicing_file.write("if len(slice_vars) == 0:\n")
-            slicing_file.write(f"{INDENT}code_ast = ast.parse(\"{line_string}\")\n")
+            slicing_file.write(f"{INDENT}code_ast = ast.parse(\"{line_string.strip()}\")\n") # make sure to strip away indented whitespace
             slicing_file.write(f"{INDENT}var_fetcher = VariableFetcher()\n")
             slicing_file.write(f"{INDENT}var_fetcher.visit(code_ast)\n")
             slicing_file.write(f"{INDENT}vars_list = var_fetcher.get_list_of_vars()\n")
@@ -179,3 +189,4 @@ def generate_backwards_slice(execution_log, lineno, var_to_slice='', scriptname=
             return "Slice successfully generated."
         else:
             return "Slice not generated; operation unsuccessful."
+
